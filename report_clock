@@ -1,0 +1,221 @@
+from tkinter import *
+from tkinter.ttk import *
+from tkinter import messagebox
+
+
+from time import strftime, gmtime
+
+import winsound
+
+import pathlib
+
+
+
+current_dir = str(pathlib.Path.cwd())
+
+file_path = current_dir + '\\alarm.wav'
+
+lines = ['Mute = False\n', '.5 Metar = False']
+
+
+name = 'ReportClock'
+
+
+global root, CheckVar1_value, CheckVar2_value, icon, isHidden, state
+
+state = True
+
+isHidden = False
+
+if pathlib.Path(current_dir + '\\clock.txt').is_file():
+    with open (current_dir + '\\clock.txt', 'r') as f:
+        lines = f.readlines()
+    
+    if 'False' in lines[0]:
+        Mute = False
+
+    else:
+        Mute = True
+
+    if 'False' in lines[1]:
+        Metar = False
+
+    else:
+        Metar = True
+        
+    
+else:
+    with open (current_dir + '\\clock.txt', 'w') as f:
+        f.writelines(lines)
+        Mute = False
+        Metar = False
+
+    
+
+fn = current_dir + '\\clock.txt'
+
+CheckVar1_value = Mute
+CheckVar2_value = Metar
+
+global tuple2
+
+tuple2 = (100, 100)
+
+
+def About():
+    messagebox.showinfo('About', 'The author is Seyed Abdolvahab Taghavi.')
+    
+
+
+def ring():
+    
+    global tuple2, CheckVar1_value, CheckVar2_value, root, lbl, isHidden, state, CheckVar1, CheckVar2
+    if state:
+
+        L = [50]
+
+        if CheckVar2.get() == 1:
+            L.append(20)
+        CheckVar1_value = CheckVar1.get()
+
+        zolotime = gmtime()
+
+        tuple1 = (zolotime.tm_min, zolotime.tm_sec)
+        
+
+        if ((tuple1[0] in L and tuple1[1] ==0) or (tuple1 == tuple2)) and CheckVar1_value == 0:
+            if isHidden:
+                
+                root.deiconify()
+            root.attributes("-topmost", True)
+            root.focus_force()
+            winsound.PlaySound(file_path, winsound.SND_LOOP + winsound.SND_ASYNC)
+            message = messagebox.askquestion("snooze","snooze", default='no')
+            
+
+            if message == 'yes':
+                winsound.PlaySound(None, winsound.SND_PURGE)
+                zolotime2 = gmtime()
+                tm_min = zolotime2.tm_min + 1
+                tm_min = (tm_min - 60) * (tm_min >= 60) + tm_min * (tm_min < 60)
+                tuple2 = (tm_min, zolotime2.tm_sec)
+            else:
+                winsound.PlaySound(None, winsound.SND_PURGE)
+                tuple2 = (100, 100)
+
+        root.after(1000, ring)
+        
+def show_time():
+    global root, CheckVar1, CheckVar1_value, lbl
+
+    string = strftime('%H:%M:%S %p')
+    lbl.config(text=string)
+    
+    root.after(1000, show_time)
+
+
+def window():
+    global root, CheckVar1_value, CheckVar1, lbl, CheckVar2_value, CheckVar2
+    
+    root = Tk()
+    root.geometry("200x100")
+    root.title('Clock')
+
+    root.iconbitmap('Clock.ico')
+
+    lbl = Label(root, font=('calibri', 40, 'bold'),
+                background='blue',
+                foreground='white')
+    
+    CheckVar1 = IntVar()
+    CheckVar2 = IntVar()
+    CheckVar1.set(CheckVar1_value)
+    CheckVar2.set(CheckVar2_value)
+
+
+    
+
+    def checkbutton():
+        bool1 = bool(CheckVar1.get())
+        str1 = str(bool1)
+        bool2 = bool(CheckVar2.get())
+        str2 = str(bool2)
+        lines12 = ['Mute = ' + str1 + '\n', '.5 Metar = ' + str2]
+        
+        with open (current_dir + '\\clock.txt', 'w') as f:
+            f.writelines(lines12)
+
+
+
+    Ch1 = Checkbutton(root, text = "Mute", variable = CheckVar1, \
+                     onvalue = 1, offvalue = 0, command=checkbutton)
+
+    Ch2 = Checkbutton(root, text = ".5 h METAR", variable = CheckVar2, \
+                     onvalue = 1, offvalue = 0, command=checkbutton)
+    
+    lbl.pack(anchor='center')
+    Ch1.pack(anchor='sw')
+    Ch2.place(x=75, y=70)
+    
+    CheckVar1_value = CheckVar1.get()
+    CheckVar2_value = CheckVar2.get()
+
+
+    menubar = Menu(root )
+    root.config(menu=menubar)
+    menubar.add_command(label="About!", command=About)
+    root.resizable(0, 0)
+    
+
+    ring()
+    show_time()
+
+    root.protocol('WM_DELETE_WINDOW', conceal_window )
+
+
+    root.mainloop()
+
+
+quit_event = EV()
+
+
+def qcallback(systray):
+    global root
+    global  state
+
+    state = False
+    
+    root.withdraw()
+    root.quit()
+    
+    quit_event.set()
+    
+    
+
+def show_window(systray):
+    global root, isHidden
+    root.deiconify()
+    isHidden = False
+
+def hide_window(systray):
+    global root, isHidden
+    root.withdraw()
+    isHidden = True
+
+def conceal_window():
+    global root, isHidden
+    root.withdraw()
+    isHidden = True
+
+
+menu_options = ( ("show_window", None, show_window),("hide_window", None, hide_window),)
+systray = SysTrayIcon("Clock.ico", "Report Clock icon", menu_options, on_quit=qcallback)
+
+with systray:
+    
+    window()
+
+    quit_event.wait(timeout=None)     # returns True if quit_event is set and False if not and timeout reached
+
+
+print("The code run  properly.")
