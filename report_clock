@@ -218,4 +218,4 @@ with systray:
     quit_event.wait(timeout=None)     # returns True if quit_event is set and False if not and timeout reached
 
 
-print("The code run  properly.")
+print("The code ran  properly.")
